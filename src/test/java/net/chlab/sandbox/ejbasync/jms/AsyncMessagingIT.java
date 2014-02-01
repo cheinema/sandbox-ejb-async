@@ -2,11 +2,9 @@ package net.chlab.sandbox.ejbasync.jms;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
+import javax.inject.Inject;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSContext;
 import javax.jms.Queue;
@@ -30,11 +28,14 @@ public class AsyncMessagingIT {
     @Resource(mappedName = MessagingConstants.QUEUE_JNDI)
     Queue queue;
 
+    @Inject
+    MessageCollector messageCollector;
+
     @Deployment
     public static WebArchive createDeployment() {
         return ShrinkWrap.create(WebArchive.class)
                 .addClasses(AsyncMessagingReceiverBean.class, MessagingConstants.class)
-                .addClass(MessageDrivenBeanInterceptor.class)
+                .addClasses(MessageCollector.class, MessageDrivenBeanInterceptor.class)
                 .addAsWebInfResource(new StringAsset(buildEjbJarDescriptor().exportAsString()), "ejb-jar.xml");
     }
 
@@ -47,9 +48,13 @@ public class AsyncMessagingIT {
 
     @Test
     public void testMessageReceived() throws Exception {
+        messageCollector.expectMessages(1);
+
         JMSContext jmsContext = connectionFactory.createContext(JMSContext.AUTO_ACKNOWLEDGE);
         jmsContext.createProducer().send(queue, "test");
-        assertTrue("timeout", MessageDrivenBeanInterceptor.latch.await(5L, TimeUnit.SECONDS));
-        assertThat(MessageDrivenBeanInterceptor.capture, is("test"));
+
+        messageCollector.waitForMessages();
+        assertThat(messageCollector.getAllMessages().size(), is(1));
+        assertThat(messageCollector.getAllMessages().get(0).getBody(String.class), is("test"));
     }
 }
