@@ -21,15 +21,16 @@ import org.junit.runner.RunWith;
 @RunWith(Arquillian.class)
 public class AsyncMessagingIT {
 
-    @Resource(mappedName = "java:/JmsXA")
+    @Resource(mappedName = MessagingConstants.CONNECTION_FACTORY_JNDI)
     ConnectionFactory connectionFactory;
 
-    @Resource(mappedName = JndiConstants.JNDI_QUEUE)
+    @Resource(mappedName = MessagingConstants.QUEUE_JNDI)
     Queue queue;
 
     @Deployment
     public static WebArchive createDeployment() {
-        return ShrinkWrap.create(WebArchive.class).addClasses(AsyncMessagingReceiverBean.class, JndiConstants.class)
+        return ShrinkWrap.create(WebArchive.class)
+                .addClasses(AsyncMessagingReceiverBean.class, MessagingConstants.class)
                 .addClass(MessageDrivenBeanInterceptor.class)
                 .addAsWebInfResource(AsyncMessagingIT.class.getPackage(), "ejb-jar.xml", "ejb-jar.xml");
     }
